@@ -22,7 +22,7 @@ class MaskedMultiHeadAttention(nn.Module):
 
         self.softmax = nn.Softmax()
 
-        self.re
+        self.mask =
 
     # INPUT x = (batch_size = 2, context_len = 3, dim_in = 968)
     def forward(self, x):
