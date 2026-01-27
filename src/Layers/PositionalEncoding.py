@@ -1,0 +1,33 @@
+from torch import nn
+import torch
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, context_length, dim_embedded):
+        super().__init__()
+        self.position_embedding = nn.Embedding(context_length, dim_embedded)
+
+    # x: (batch_size, context_len, embedded_dim)
+    def forward(self, sentence_length, device):
+        pos = torch.arange(sentence_length, device=device, dtype=torch.long)  # (1, context_len)
+        pos_emb = self.position_embedding(pos) # (1, context_len, embedded_dim)
+        return pos_emb
+
+
+
+
+if __name__ == '__main__':
+    vocab_size = 51212
+    context_length = 1024
+    batch_size = 4
+    embd_dim = 512
+
+    embedding = nn.Embedding(vocab_size, embd_dim)
+
+    dummy_vector = torch.ones(batch_size, context_length, dtype=torch.int)
+
+    print(dummy_vector.shape)
+
+    out_embedding = embedding(dummy_vector)
+
+    # torch.Size([4, 51212, 512])
+    print(out_embedding.shape)

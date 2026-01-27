@@ -54,6 +54,7 @@ class MaskedMultiHeadAttention(nn.Module):
         att_score = att_score / math.sqrt(self.head_dim)
 
         # now masking
+        # but if sentence is not == context_lenght mask is truncated
         mask = self.mask.bool()[0:context_length, 0:context_length]
         att_score = att_score.masked_fill_(mask, -torch.inf)
 

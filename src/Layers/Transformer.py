@@ -1,7 +1,7 @@
 import torch
 from torch import nn
-from Attention import MaskedMultiHeadAttention
-from MLP import MultiLayerPerceptron
+from .Attention import MaskedMultiHeadAttention
+from .MLP import MultiLayerPerceptron
 
 # Decoder only, transormer like block
 class TransformerDecoder(nn.Module):

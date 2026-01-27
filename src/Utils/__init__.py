@@ -1,1 +1,1 @@
-from Config import ConfigGPT
+from .Config import ConfigGPT
