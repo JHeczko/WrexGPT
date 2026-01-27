@@ -4,8 +4,8 @@ from Attention import MaskedMultiHeadAttention
 from MLP import MultiLayerPerceptron
 
 # Decoder only, transormer like block
-class Transformer(nn.Module):
-    def __init__(self, dim_embedded, context_length, num_heads=12, dropout=0.1, qkv_bias=False):
+class TransformerDecoder(nn.Module):
+    def __init__(self, dim_embedded, context_length, num_heads, dropout=0.1, qkv_bias=False):
         super().__init__()
         self.dim_embedded = dim_embedded
         self.context_length = context_length
@@ -17,11 +17,12 @@ class Transformer(nn.Module):
         self.ln1 = nn.LayerNorm(self.dim_embedded, elementwise_affine=False)
         self.ln2 = nn.LayerNorm(self.dim_embedded, elementwise_affine=False)
 
-        self.dropout = nn.Dropout(dropout)
+        self.dropout_attn = nn.Dropout(dropout)
+        self.dropout_mlp = nn.Dropout(dropout)
 
     def forward(self, x):
-        x = x + self.dropout(self.attention(self.ln1(x)))
-        x = x + self.dropout(self.mlp(self.ln2(x)))
+        x = x + self.dropout_attn(self.attention(self.ln1(x)))
+        x = x + self.dropout_mlp(self.mlp(self.ln2(x)))
         return x
 
 
@@ -35,7 +36,7 @@ if __name__ == "__main__":
     x = torch.randn(batch_size, context_len, dim)
     print(x.shape)
 
-    transformer = Transformer(dim_embedded=dim, context_length=context_len)
+    transformer = TransformerDecoder(dim_embedded=dim, context_length=context_len)
 
     x_out = transformer(x)
 
