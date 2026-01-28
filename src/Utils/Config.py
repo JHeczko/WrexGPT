@@ -1,10 +1,11 @@
 class ConfigGPT:
-    def __init__(self,  dim_embedded, vocab_size, context_length, num_heads, layers):
+    def __init__(self,  dim_embedded, vocab_size, context_length, num_heads, layers, padding_token):
         self.__dim_embedded = dim_embedded
         self.__vocab_size = vocab_size
         self.__context_length = context_length
         self.__num_heads = num_heads
         self.__layers = layers
+        self.__padding_token = padding_token
 
 
     @property
@@ -56,3 +57,13 @@ class ConfigGPT:
     @layers.getter
     def layers(self):
         return self.__layers
+
+    @property
+    def padding_token(self):
+        return self.__padding_token
+    @padding_token.setter
+    def padding_token(self, padding_token):
+        self.__padding_token = padding_token
+    @padding_token.getter
+    def padding_token(self):
+        return self.__padding_token

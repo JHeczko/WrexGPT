@@ -20,9 +20,24 @@ class TransformerDecoder(nn.Module):
         self.dropout_attn = nn.Dropout(dropout)
         self.dropout_mlp = nn.Dropout(dropout)
 
-    def forward(self, x):
-        x = x + self.dropout_attn(self.attention(self.ln1(x)))
-        x = x + self.dropout_mlp(self.mlp(self.ln2(x)))
+    # x = (batch_size, context_len, embedded_dim)
+    def forward(self, x, mask=None):
+        # batch, con, emb = x.shape
+        # mask = torch.zeros(batch, con, emb, dtype=torch.int,device=x.device)
+
+        identity = x
+        x = self.ln1(x)
+        x = self.attention(x, mask)
+        x = self.dropout_attn(x)
+        x = x + identity
+
+        identity = x
+        x = self.ln2(x)
+        x = self.mlp(x)
+        x = self.dropout_mlp(x)
+        x = x + identity
+        # x = x + self.dropout_attn(self.attention(self.ln1(x)))
+        # x = x + self.dropout_mlp(self.mlp(self.ln2(x)))
         return x
 
 
@@ -30,14 +45,14 @@ if __name__ == "__main__":
     torch.manual_seed(0)
 
     batch_size = 1
-    context_len = 16
-    dim = 768
+    context_len = 4
+    dim = 4
 
     x = torch.randn(batch_size, context_len, dim)
-    print(x.shape)
+    print(x)
 
-    transformer = TransformerDecoder(dim_embedded=dim, context_length=context_len)
+    transformer = TransformerDecoder(dim_embedded=dim, context_length=context_len, num_heads=2)
 
     x_out = transformer(x)
 
-    print(x_out.shape)
+    print(x_out)

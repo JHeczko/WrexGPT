@@ -28,7 +28,7 @@ class MaskedMultiHeadAttention(nn.Module):
         self.out_projection = nn.Linear(dim_out, dim_out)
 
     # INPUT x = (batch_size = 2, context_len = 3, dim_in = 968)
-    def forward(self, x):
+    def forward(self, x, padding_mask=None):
         batch_size, context_length, dim_in = x.shape
 
         # x = (batch_size = 2, context_len = 3, dim_out = 968)
@@ -54,9 +54,15 @@ class MaskedMultiHeadAttention(nn.Module):
         att_score = att_score / math.sqrt(self.head_dim)
 
         # now masking
-        # but if sentence is not == context_lenght mask is truncated
+        # but if sentences are not == context_len then mask is truncated
         mask = self.mask.bool()[0:context_length, 0:context_length]
-        att_score = att_score.masked_fill_(mask, -torch.inf)
+        # trio mask
+        att_score = att_score.masked_fill_(mask, torch.finfo(att_score.dtype).min)
+        # padding mask
+        if padding_mask is not None:
+            att_score = att_score.masked_fill_(padding_mask, torch.finfo(att_score.dtype).min)
+
+
 
         # softmax + dropout
         att_score = self.softmax(att_score)
@@ -98,7 +104,7 @@ if __name__ == "__main__":
         context_length=seq_len,
         num_heads=heads,
         dropout=0.0,
-        bias=False
+        bias=False,
     )
 
     my_attn.eval()

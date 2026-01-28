@@ -33,6 +33,14 @@ class WrexGPT(nn.Module):
         batch_size, sentence_length = x.shape
         assert sentence_length <= self.config.context_length
 
+        # before all compute we have to calculate padding mask
+        padding_token = self.config.padding_token
+        keep = (x != padding_token)  # (B, C) bool, True = token
+        keep2d = keep.unsqueeze(2) & keep.unsqueeze(1)  # (B, C, C) bool True=keep
+        mask_pad = ~keep2d  # True = maskuj
+        # mask_pad = (batch_size, 1, context_len, context_len)
+        mask_pad = mask_pad.unsqueeze(1)  # (B,1,C,C)
+
         # first we embed
         # x = (batch_size, context_len, embedded_dim)
         emb_x = self.embedding(x)
@@ -47,7 +55,7 @@ class WrexGPT(nn.Module):
         # now grind through transformers
 
         for transformer in self.transformers:
-            x = transformer(x)
+            x = transformer(x, mask_pad)
 
         # finally normalization and linear layer
         # x = (batch_size, context_len, vocab_size)
@@ -65,7 +73,8 @@ if __name__ == "__main__":
         vocab_size=500,
         context_length=12,
         num_heads=2,
-        layers=2
+        layers=2,
+        padding_token=50256
     )
     model = WrexGPT(config)
 
