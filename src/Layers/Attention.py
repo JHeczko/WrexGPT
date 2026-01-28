@@ -26,6 +26,7 @@ class MaskedMultiHeadAttention(nn.Module):
         self.register_buffer("mask", torch.triu(torch.ones(context_length, context_length), diagonal=1))
 
         self.out_projection = nn.Linear(dim_out, dim_out)
+        self.out_projection.RESIDUAL_INIT = 1
 
     # INPUT x = (batch_size = 2, context_len = 3, dim_in = 968)
     def forward(self, x, padding_mask=None):

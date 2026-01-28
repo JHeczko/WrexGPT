@@ -8,8 +8,11 @@ class MultiLayerPerceptron(nn.Module):
         super().__init__()
 
         self.l1 = nn.Linear(dim_in, dim_hidden)
+
         self.gelu = nn.GELU()
+
         self.l2 = nn.Linear(dim_hidden, dim_in)
+        self.l2.RESIDUAL_INIT = 1
 
     def forward(self, x):
         x = self.l1(x)

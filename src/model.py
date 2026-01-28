@@ -1,3 +1,5 @@
+import math
+
 from torch import nn
 import Utils
 import Layers
@@ -28,6 +30,8 @@ class WrexGPT(nn.Module):
         self.out_ln = nn.LayerNorm(config.dim_embedded)
         self.out_projection = nn.Linear(config.dim_embedded, config.vocab_size)
 
+        self.apply(self.__init_weights)
+
     # x = (batch_size, >= context_len)
     def forward(self, x):
         batch_size, sentence_length = x.shape
@@ -35,11 +39,14 @@ class WrexGPT(nn.Module):
 
         # before all compute we have to calculate padding mask
         padding_token = self.config.padding_token
+
+        # keep = (batch_size, context_len)
         keep = (x != padding_token)  # (B, C) bool, True = token
-        keep2d = keep.unsqueeze(2) & keep.unsqueeze(1)  # (B, C, C) bool True=keep
-        mask_pad = ~keep2d  # True = maskuj
+        # keep2d = (batch_size, context_len, context_en)
+        keep2d = keep.unsqueeze(2) & keep.unsqueeze(1)
+        mask_pad = ~keep2d
         # mask_pad = (batch_size, 1, context_len, context_len)
-        mask_pad = mask_pad.unsqueeze(1)  # (B,1,C,C)
+        mask_pad = mask_pad.unsqueeze(1)
 
         # first we embed
         # x = (batch_size, context_len, embedded_dim)
@@ -53,7 +60,6 @@ class WrexGPT(nn.Module):
         x = emb_x + pos_x
 
         # now grind through transformers
-
         for transformer in self.transformers:
             x = transformer(x, mask_pad)
 
@@ -62,7 +68,24 @@ class WrexGPT(nn.Module):
         x = self.out_ln(x)
         x = self.out_projection(x)
 
+        # logits out
         return x
+
+    def __init_weights(self, module: nn.Module):
+        if isinstance(module, nn.Linear):
+            std = 0.02
+
+            if hasattr(module, 'RESIDUAL_INIT'):
+                std /= (2*self.config.layers)**0.5
+
+            nn.init.normal_(module.weight, mean=0,std=std)
+
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0, std=0.02)
+
 
 
 
@@ -74,12 +97,12 @@ if __name__ == "__main__":
         context_length=12,
         num_heads=2,
         layers=2,
-        padding_token=50256
+        padding_token=50257
     )
     model = WrexGPT(config)
 
     dummy_vec = torch.ones(10, config.context_length, dtype=torch.int)
 
-    out_vec = model(dummy_vec)
+    #out_vec = model(dummy_vec)
 
-    print(out_vec.shape)
+    #print(out_vec.shape)

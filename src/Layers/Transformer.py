@@ -22,9 +22,9 @@ class TransformerDecoder(nn.Module):
 
     # x = (batch_size, context_len, embedded_dim)
     def forward(self, x, mask=None):
-        # batch, con, emb = x.shape
-        # mask = torch.zeros(batch, con, emb, dtype=torch.int,device=x.device)
 
+        # x = (batch_size, context_len, embedded_dim)
+        # throguh out all transformer it is the same size
         identity = x
         x = self.ln1(x)
         x = self.attention(x, mask)
@@ -36,8 +36,11 @@ class TransformerDecoder(nn.Module):
         x = self.mlp(x)
         x = self.dropout_mlp(x)
         x = x + identity
+
         # x = x + self.dropout_attn(self.attention(self.ln1(x)))
         # x = x + self.dropout_mlp(self.mlp(self.ln2(x)))
+
+        # x = (batch_size, context_len, embedded_dim)
         return x
 
 
