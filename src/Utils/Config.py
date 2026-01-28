@@ -1,69 +1,27 @@
-class ConfigGPT:
-    def __init__(self,  dim_embedded, vocab_size, context_length, num_heads, layers, padding_token):
-        self.__dim_embedded = dim_embedded
-        self.__vocab_size = vocab_size
-        self.__context_length = context_length
-        self.__num_heads = num_heads
-        self.__layers = layers
-        self.__padding_token = padding_token
+from dataclasses import dataclass
+import torch
 
+@dataclass
+class ConfigGPT2:
+    dim_embedded: int = 768
+    vocab_size: int = 50258
+    context_length: int = 1024
+    num_heads: int = 12
+    layers: int = 12
+    padding_token: int = 50257  # Możesz od razu ustawić domyślną wartość
 
-    @property
-    def dim_embedded(self):
-        return self.__dim_embedded
-    @dim_embedded.setter
-    def dim_embedded(self, dim_embedded):
-        self.__dim_embedded = dim_embedded
-    @dim_embedded.getter
-    def dim_embedded(self):
-        return self.__dim_embedded
+class TrainConfig:
+    epochs: int = 5
+    lr: float = 3e-4
+    weight_decay: float = 0.1
+    grad_clip: float = 1.0
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
-    @property
-    def vocab_size(self):
-        return self.__vocab_size
-    @vocab_size.setter
-    def vocab_size(self, vocab_size):
-        self.__vocab_size = vocab_size
-    @vocab_size.getter
-    def vocab_size(self):
-        return self.__vocab_size
+    # mixed precision
+    use_amp: bool = True
 
-    @property
-    def context_length(self):
-        return self.__context_length
-    @context_length.setter
-    def context_length(self, context_length):
-        self.__context_length = context_length
-    @context_length.getter
-    def context_length(self):
-        return self.__context_length
+    # logging
+    log_every: int = 50
 
-    @property
-    def num_heads(self):
-        return self.__num_heads
-    @num_heads.setter
-    def num_heads(self, num_heads):
-        self.__num_heads = num_heads
-    @num_heads.getter
-    def num_heads(self):
-        return self.__num_heads
-
-    @property
-    def layers(self):
-        return self.__layers
-    @layers.setter
-    def layers(self, layers):
-        self.__layers = layers
-    @layers.getter
-    def layers(self):
-        return self.__layers
-
-    @property
-    def padding_token(self):
-        return self.__padding_token
-    @padding_token.setter
-    def padding_token(self, padding_token):
-        self.__padding_token = padding_token
-    @padding_token.getter
-    def padding_token(self):
-        return self.__padding_token
+    # optional: scheduler
+    warmup_steps: int = 0

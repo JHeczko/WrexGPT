@@ -7,7 +7,7 @@ import torch
 
 # GPT-2 Pretrained only
 class WrexGPT(nn.Module):
-    def __init__(self, config: Utils.ConfigGPT):
+    def __init__(self, config: Utils.ConfigGPT2):
         super().__init__()
         self.config = config
 
@@ -91,13 +91,13 @@ class WrexGPT(nn.Module):
 
 
 if __name__ == "__main__":
-    config = Utils.ConfigGPT(
+    config = Utils.ConfigGPT2(
         dim_embedded=12,
         vocab_size=500,
         context_length=12,
         num_heads=2,
         layers=2,
-        padding_token=50258
+        padding_token=50257
     )
     model = WrexGPT(config)
 

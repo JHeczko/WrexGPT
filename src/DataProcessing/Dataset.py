@@ -5,7 +5,6 @@ class ShakespeareDataset(torch.utils.data.Dataset):
     def __init__(self, tokens_path, context_len):
         self.tokens = np.load(tokens_path, mmap_mode="r")
         self.context_len = context_len
-        print(len(self.tokens))
 
     def __len__(self):
         # cuz we have to left one word for last prediction

@@ -2,6 +2,7 @@ import numpy as np
 import tiktoken
 import ftfy
 
+# do it only once to tokenize data and save it to numpy file
 if __name__ == '__main__':
     gpt2_base_tokenizer = tiktoken.encoding_for_model("gpt2")
 
