@@ -7,9 +7,10 @@ class PositionalEncoding(nn.Module):
         self.position_embedding = nn.Embedding(context_length, dim_embedded)
 
     def forward(self, sentence_length, device):
-        pos = torch.arange(sentence_length, device=device, dtype=torch.long)  # (, context_len)
-        pos_emb = self.position_embedding(pos)
+        # pos = (, context_len)
+        pos = torch.arange(sentence_length, device=device, dtype=torch.long)
         # pos_emb = (, context_len, embedded_dim)
+        pos_emb = self.position_embedding(pos)
         return pos_emb
 
 

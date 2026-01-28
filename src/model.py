@@ -32,6 +32,21 @@ class WrexGPT(nn.Module):
 
         self.apply(self.__init_weights)
 
+    def __init_weights(self, module: nn.Module):
+        if isinstance(module, nn.Linear):
+            std = 0.02
+
+            if hasattr(module, 'RESIDUAL_INIT'):
+                std /= (2*self.config.layers)**0.5
+
+            nn.init.normal_(module.weight, mean=0,std=std)
+
+            if module.bias is not None:
+                nn.init.zeros_(module.bias)
+
+        elif isinstance(module, nn.Embedding):
+            nn.init.normal_(module.weight, mean=0, std=0.02)
+
     # x = (batch_size, >= context_len)
     def forward(self, x):
         batch_size, sentence_length = x.shape
@@ -71,21 +86,6 @@ class WrexGPT(nn.Module):
         # logits out
         return x
 
-    def __init_weights(self, module: nn.Module):
-        if isinstance(module, nn.Linear):
-            std = 0.02
-
-            if hasattr(module, 'RESIDUAL_INIT'):
-                std /= (2*self.config.layers)**0.5
-
-            nn.init.normal_(module.weight, mean=0,std=std)
-
-            if module.bias is not None:
-                nn.init.zeros_(module.bias)
-
-        elif isinstance(module, nn.Embedding):
-            nn.init.normal_(module.weight, mean=0, std=0.02)
-
 
 
 
@@ -97,12 +97,12 @@ if __name__ == "__main__":
         context_length=12,
         num_heads=2,
         layers=2,
-        padding_token=50257
+        padding_token=50258
     )
     model = WrexGPT(config)
 
-    dummy_vec = torch.ones(10, config.context_length, dtype=torch.int)
+    dummy_vec = torch.ones(10, config.context_length-4, dtype=torch.int)
 
-    #out_vec = model(dummy_vec)
+    out_vec = model(dummy_vec)
 
-    #print(out_vec.shape)
+    print(out_vec.shape)
