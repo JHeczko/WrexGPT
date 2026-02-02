@@ -7,25 +7,133 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
-from .Config import TrainConfig
+from .Config import TrainConfig, ConfigGPT2
 
-# @dataclass
-# class TrainConfig:
-#     epochs: int = 5
-#     lr: float = 3e-4
-#     weight_decay: float = 0.1
-#     grad_clip: float = 1.0
-#     device: str = "cuda" if torch.cuda.is_available() else "cpu"
-#
-#     # mixed precision
-#     use_amp: bool = True
-#
-#     # logging
-#     log_every: int = 50
-#
-#     # optional: scheduler
-#     warmup_steps: int = 0
+
+class GPT2Trainer:
+    def __init__(self, model: nn.Module, config: TrainConfig, train_loader, val_loader=None):
+        self.model = model
+        self.config = config
+        self.train_loader = train_loader
+        self.val_loader = val_loader
+
+        self.loss_fn = nn.CrossEntropyLoss()
+
+        self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=config.max_lr)
+
+        self.scaler = torch.amp.GradScaler(device=config.device, enabled=(config.use_amp and "cuda" in config.device))
+
+        self.global_step = 0
+
+        warmup = LinearLR(self.optimizer, start_factor=1e-8, end_factor=self.config.max_lr, total_iters=config.warmup_steps)
+
+        cosine = CosineAnnealingLR(self.optimizer, T_max=config.max_lr, eta_min=0)
+
+        self.scheduler = None
+
+    def __calculate_loss(self, logits, y):
+        # logits = (B, T, V)
+        # y      = (B, T)
+        B, T, V = logits.shape
+        logits = logits.view(B * T, V)
+        y = y.view(B * T)
+        loss = self.loss_fn(logits, y, ignore_index=self.config.padding_token)
+        return loss
+
+    @torch.no_grad()
+    def __calculate_accuracy(self, logits, y):
+        # logits = (B, T, V)
+        # y      = (B, T)
+        preds = logits.argmax(dim=-1)  # (B, T)
+        mask = (y != self.config.padding_token)
+
+        if mask.sum() == 0:
+            return 0.0
+
+        correct = ((preds == y) & mask).float().sum()
+        total = mask.float().sum()
+        return (correct / total).item()
+
+    def __train_epoch(self):
+        running_loss = 0.0
+        running_acc = 0.0
+        total_batches = 0
+
+        self.model.train()
+
+        for X, y in self.train_loader:
+            self.optimizer.zero_grad(set_to_none=True)
+
+            X = X.to(self.config.device, non_blocking=True)
+            y = y.to(self.config.device, non_blocking=True)
+
+            if self.config.use_amp:
+                with torch.autocast(device_type="cuda"):
+                    logits = self.model(X)
+                    loss = self.__calculate_loss(logits, y)
+
+                self.scaler.scale(loss).backward()
+
+                self.scaler.unscale_(self.optimizer)
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_clip)
+
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+
+            else:
+                logits = self.model(X)
+                loss = self.__calculate_loss(logits, y)
+
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_clip)
+                self.optimizer.step()
+
+            if self.scheduler is not None:
+                self.scheduler.step()
+
+            self.global_step += 1
+
+            running_loss += loss.item()
+            running_acc += self.__calculate_accuracy(logits.detach(), y)
+            total_batches += 1
+
+        avg_loss = running_loss / max(1,total_batches)
+        avg_acc = running_acc / max(1,total_batches)
+        ppl = math.exp(min(avg_loss, 20))
+
+        return avg_loss, avg_acc, ppl
+
+    def __validate_model(self):
+        if self.val_loader is None:
+            return None
+
+        self.model.eval()
+
+        total_loss = 0.0
+        total_acc = 0.0
+        n_batches = 0
+
+        for x, y in self.val_loader:
+            x = x.to(self.config.device, non_blocking=True)
+            y = y.to(self.config.device, non_blocking=True)
+
+            logits = self.model(x)
+            loss = self.__calculate_loss(logits, y)
+            acc = self.__calculate_accuracy(logits, y)
+
+            total_loss += loss.item()
+            total_acc += acc
+            n_batches += 1
+
+        avg_loss = total_loss / max(1, n_batches)
+        avg_acc = total_acc / max(1, n_batches)
+        ppl = math.exp(min(avg_loss, 20))
+
+        return avg_loss, avg_acc, ppl
+
+    def train(self): pass
 
 
 class GPTTrainer:
@@ -35,8 +143,7 @@ class GPTTrainer:
         train_loader: DataLoader,
         val_loader: Optional[DataLoader] = None,
         test_loader: Optional[DataLoader] = None,
-        cfg: TrainConfig = TrainConfig()
-    ):
+        cfg: TrainConfig = TrainConfig()):
         self.model = model.to(cfg.device)
         self.train_loader = train_loader
         self.val_loader = val_loader

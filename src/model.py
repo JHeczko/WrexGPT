@@ -1,5 +1,3 @@
-import math
-
 from torch import nn
 import Utils
 import Layers
@@ -85,9 +83,6 @@ class WrexGPT(nn.Module):
 
         # logits out
         return x
-
-
-
 
 
 if __name__ == "__main__":
