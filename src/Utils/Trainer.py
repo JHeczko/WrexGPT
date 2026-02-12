@@ -42,7 +42,7 @@ class GPT2Trainer:
         }
 
         steps_per_epoch = len(self.train_loader)
-        self.epochs = math.ceil(self.config.training_steps / steps_per_epoch)
+        self.epochs = math.ceil((self.config.training_steps + self.config.warmup_steps) / steps_per_epoch)
         self.total_steps = self.config.training_steps + self.config.warmup_steps
 
         warmup = LinearLR(self.optimizer, start_factor=1e-8, end_factor=1.0, total_iters=config.warmup_steps)
@@ -74,7 +74,7 @@ class GPT2Trainer:
     def __save_checkpoint(self):
 
         checkpoint = {
-            "epoch": self.current_epoch,
+            "current_epoch": self.current_epoch,
             "global_step": self.current_step,
             "model_state_dict": self.model.state_dict(),
             "optimizer_state_dict": self.optimizer.state_dict(),
@@ -119,12 +119,9 @@ class GPT2Trainer:
 
         self.model.train()
 
-        for X, y in tqdm.tqdm(self.train_loader, desc=f"Iteration {self.current_step}", nrows=30):
+        for X, y in tqdm.tqdm(self.train_loader, desc=f"Training {self.current_epoch+1}", leave=False):
             X,y = X.to(self.config.device, non_blocking=True), y.to(self.config.device, non_blocking=True)
             self.optimizer.zero_grad(set_to_none=True)
-
-            X = X.to(self.config.device, non_blocking=True)
-            y = y.to(self.config.device, non_blocking=True)
 
             if self.config.use_amp:
                 with torch.autocast(device_type="cuda"):
@@ -158,16 +155,16 @@ class GPT2Trainer:
 
             if self.current_step%self.config.info_decay == 0:
                 val_loss, val_acc, val_ppl = self.__validate_model()
-                print(
-                    f"[step {self.current_step:>7}] "
-                    f"test_loss={running_loss / max(1,total_batches):.4f} | "
-                    f"test_acc={running_acc / max(1,total_batches):.4f} | "
-                    f"val_loss={val_loss:.4f} | "
-                    f"val_acc={val_acc:.4f} | "
-                    f"val_ppl={val_ppl:.2f}"
+
+                tqdm.tqdm.write(
+                    f"[Step {self.current_step}] "
+                    f"Avg Train Loss: {running_loss / total_batches:.4f} | "
+                    f"Val Loss: {val_loss:.4f} | Val PPL: {val_ppl:.2f}"
                 )
 
-            if self.current_step == self.total_steps:
+                self.model.train()
+
+            if self.current_step >= self.total_steps:
                 break
 
 
@@ -181,7 +178,7 @@ class GPT2Trainer:
     @torch.no_grad()
     def __validate_model(self):
         if self.val_loader is None:
-            return None
+            return 0.0, 0.0, 0.0
 
         self.model.eval()
 
@@ -189,7 +186,7 @@ class GPT2Trainer:
         total_acc = 0.0
         n_batches = 0
 
-        for x, y in tqdm.tqdm(self.val_loader, desc=f"Validation {n_batches}/{len(self.val_loader)}", nrows=30):
+        for x, y in tqdm.tqdm(self.val_loader, desc="Validating", leave=False):
             x = x.to(self.config.device, non_blocking=True)
             y = y.to(self.config.device, non_blocking=True)
 

@@ -87,7 +87,7 @@ class TrainConfig:
         """
         configs = {
             "gpt2-mini": {
-                "training_steps": 100000,
+                "training_steps": 4749500, # eqiuvalent of 300 epochs during training
                 "max_lr": 5e-4,
                 "batch_size": 64,
                 "weight_decay": 0.1,
@@ -98,9 +98,9 @@ class TrainConfig:
                 "info_decay": 1000,
             },
             "gpt2": {
-                "training_steps": 100000,
+                "training_steps": 355500, # equivalent of 300 epochs during training
                 "max_lr": 2.5e-4,
-                "batch_size": 256,  # Możesz zmienić jeśli GPT2 ma inny batch_size
+                "batch_size": 256,
                 "weight_decay": 0.01,
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
