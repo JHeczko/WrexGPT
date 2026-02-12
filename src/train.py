@@ -2,8 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 from DataProcessing import ShakespeareDataset
 from Model import WrexGPT
-from Utils import ModelConfig, TrainConfig, GPT2Trainer
-from src.Utils.EarlyStopper import EarlyStopping
+from Utils import ModelConfig, TrainConfig, GPT2Trainer, EarlyStopping
 
 if __name__ == "__main__":
     gpt_config = ModelConfig.from_preset("gpt2-mini")

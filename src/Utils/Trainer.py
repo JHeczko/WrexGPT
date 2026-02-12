@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 
-from Config import TrainConfig
+from .Config import TrainConfig
 
 
 class GPT2Trainer:
