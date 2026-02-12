@@ -1,5 +1,6 @@
 import math
 
+import tqdm
 import torch
 from torch import nn
 from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
@@ -118,7 +119,7 @@ class GPT2Trainer:
 
         self.model.train()
 
-        for X, y in self.train_loader:
+        for X, y in tqdm.tqdm(self.train_loader, desc=f"Iteration {self.current_step}", nrows=30):
             X,y = X.to(self.config.device, non_blocking=True), y.to(self.config.device, non_blocking=True)
             self.optimizer.zero_grad(set_to_none=True)
 
@@ -216,7 +217,7 @@ class GPT2Trainer:
         print(f"Total epochs: {self.epochs}")
         print("=" * 80)
 
-        for epoch in range(self.current_epoch, self.epochs):
+        for epoch in tqdm.tqdm(range(self.current_epoch, self.epochs), desc=f"Epoch {self.current_epoch+1}/{self.epochs}"):
 
             train_loss, train_acc, train_ppl = self.__train_epoch()
             val_loss, val_acc, val_ppl = self.__validate_model()

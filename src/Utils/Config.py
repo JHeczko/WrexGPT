@@ -82,7 +82,7 @@ class TrainConfig:
                 "scale_factor": 2.0,
                 "warmup_steps": 500,
                 "early_stopper_patience": 10,
-                "info_decay": 30,
+                "info_decay": 1000,
             },
             "gpt2": {
                 "training_steps": 100000,
