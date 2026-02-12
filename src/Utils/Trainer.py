@@ -189,7 +189,7 @@ class GPT2Trainer:
         total_acc = 0.0
         n_batches = 0
 
-        for x, y in self.val_loader:
+        for x, y in tqdm.tqdm(self.val_loader, desc=f"Validation {n_batches}/{len(self.val_loader)}", nrows=30):
             x = x.to(self.config.device, non_blocking=True)
             y = y.to(self.config.device, non_blocking=True)
 

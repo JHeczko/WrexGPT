@@ -30,4 +30,3 @@ if __name__ == '__main__':
     np.save(out_path, arr)
 
     print("tokens:", arr.shape)
-    print(text)

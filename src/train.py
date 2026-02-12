@@ -8,6 +8,9 @@ if __name__ == "__main__":
     gpt_config = ModelConfig.from_preset("gpt2-mini")
     train_config = TrainConfig.from_preset("gpt2-mini")
 
+    print(gpt_config)
+    print(train_config)
+
     model = WrexGPT(config = gpt_config)
     ds = ShakespeareDataset("./dataset/input_tokens.npy", gpt_config.context_length)
 

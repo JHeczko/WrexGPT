@@ -24,9 +24,9 @@ class ModelConfig:
         configs = {
             "gpt2-mini": {
                 "dim_embedded": 512,
-                "context_length": 512,
-                "num_heads": 8,
-                "layers": 6,
+                "context_length": 256,
+                "num_heads": 4,
+                "layers": 4,
                 "dropout": 0.2,
             },
             "gpt2": {
@@ -43,6 +43,19 @@ class ModelConfig:
 
         return cls(**configs[preset])
 
+
+    def __repr__(self) -> str:
+        """Pretty print configuration."""
+        class_name = self.__class__.__name__
+        fields = []
+        max_key_length = max(len(key) for key in self.__dataclass_fields__.keys())
+
+        for key, value in self.__dict__.items():
+            padding = " " * (max_key_length - len(key))
+            fields.append(f"  {key}{padding} = {value}")
+
+        fields_str = "\n".join(fields)
+        return f"{class_name}(\n{fields_str}\n)"
 
 @dataclass
 class TrainConfig:
@@ -76,7 +89,7 @@ class TrainConfig:
             "gpt2-mini": {
                 "training_steps": 100000,
                 "max_lr": 5e-4,
-                "batch_size": 64,
+                "batch_size": 16,
                 "weight_decay": 0.1,
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
@@ -107,6 +120,18 @@ class TrainConfig:
             device=device,
         )
 
+    def __repr__(self) -> str:
+        """Pretty print configuration."""
+        class_name = self.__class__.__name__
+        fields = []
+        max_key_length = max(len(key) for key in self.__dataclass_fields__.keys())
+
+        for key, value in self.__dict__.items():
+            padding = " " * (max_key_length - len(key))
+            fields.append(f"  {key}{padding} = {value}")
+
+        fields_str = "\n".join(fields)
+        return f"{class_name}(\n{fields_str}\n)"
 
 # Przykłady użycia:
 if __name__ == "__main__":
