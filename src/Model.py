@@ -5,7 +5,7 @@ import torch
 
 # GPT-2 Pretrained only
 class WrexGPT(nn.Module):
-    def __init__(self, config: Utils.ConfigGPT2):
+    def __init__(self, config: Utils.ModelConfig):
         super().__init__()
         self.config = config
 
@@ -20,7 +20,7 @@ class WrexGPT(nn.Module):
                     dim_embedded=config.dim_embedded,
                     context_length=config.context_length,
                     num_heads=config.num_heads,
-                    dropout=0.1,
+                    dropout=config.dropout,
                     qkv_bias=False
                 )
             )

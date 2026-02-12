@@ -1,25 +1,32 @@
 import torch
 from torch.utils.data import DataLoader
 from DataProcessing import ShakespeareDataset
-from model import WrexGPT
-from src import Utils
-from Utils import GPT2Trainer, TrainConfig
+from Model import WrexGPT
+from Utils import ModelConfig, TrainConfig, GPT2Trainer
+from src.Utils.EarlyStopper import EarlyStopping
 
 if __name__ == "__main__":
-    config = Utils.ConfigGPT2(
-        dim_embedded=12,
-        context_length=12,
-        num_heads=2,
-        layers=2,
+    gpt_config = ModelConfig.from_preset("gpt2-mini")
+    train_config = TrainConfig.from_preset("gpt2-mini")
+
+    model = WrexGPT(config = gpt_config)
+    ds = ShakespeareDataset("./dataset/input_tokens.npy", gpt_config.context_length)
+
+    generator = torch.Generator().manual_seed(42)
+    train_ds, val_ds = torch.utils.data.random_split(
+        ds,
+        [0.9, 0.1],
+        generator=generator
     )
-    model = WrexGPT(config = config)
 
-    ds = ShakespeareDataset("./dataset/input_tokens.npy", config.context_length)
-
-    train_loader = DataLoader(dataset=ds, batch_size=512, shuffle=True)
+    train_loader = DataLoader(dataset=train_ds, batch_size=train_config.batch_size, shuffle=True)
+    val_loader = DataLoader(dataset=val_ds, batch_size=train_config.batch_size, shuffle=True)
 
     print(len(train_loader))
+    print(len(val_loader))
 
-    trainer = GPT2Trainer(model=model, config=TrainConfig, train_loader=train_loader)
+    earlystopper = EarlyStopping(patience=train_config.early_stopper_patience, path="./checkpoints/best_model.pt")
 
-    trainer.train_epoch()
+    trainer = GPT2Trainer(model=model, config=train_config, train_loader=train_loader, val_loader=val_loader, checkpoint_path="./checkpoints/checkpoint.pt")
+
+    trainer.train(revive_mode=False)
