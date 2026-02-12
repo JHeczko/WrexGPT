@@ -18,11 +18,9 @@ if __name__ == "__main__":
         generator=generator
     )
 
-    train_loader = DataLoader(dataset=train_ds, batch_size=train_config.batch_size, shuffle=True)
-    val_loader = DataLoader(dataset=val_ds, batch_size=train_config.batch_size, shuffle=True)
+    train_loader = DataLoader(dataset=train_ds, batch_size=train_config.batch_size, shuffle=True, pin_memory=True)
+    val_loader = DataLoader(dataset=val_ds, batch_size=train_config.batch_size, shuffle=True, pin_memory=True)
 
-    print(len(train_loader))
-    print(len(val_loader))
 
     earlystopper = EarlyStopping(patience=train_config.early_stopper_patience, path="./checkpoints/best_model.pt")
 

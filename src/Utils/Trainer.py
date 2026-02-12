@@ -10,8 +10,12 @@ from .Config import TrainConfig
 class GPT2Trainer:
     def __init__(self, model: nn.Module, config: TrainConfig, train_loader, val_loader=None, earlystoper=None, checkpoint_path=""):
         self.model = model
+        self.model.to(config.device)
+
         self.config = config
+
         self.train_loader = train_loader
+
         self.val_loader = val_loader
 
         self.earlystopper = earlystoper
@@ -115,6 +119,7 @@ class GPT2Trainer:
         self.model.train()
 
         for X, y in self.train_loader:
+            X,y = X.to(self.config.device, non_blocking=True), y.to(self.config.device, non_blocking=True)
             self.optimizer.zero_grad(set_to_none=True)
 
             X = X.to(self.config.device, non_blocking=True)
