@@ -24,9 +24,9 @@ class ModelConfig:
         configs = {
             "gpt2-mini": {
                 "dim_embedded": 512,
-                "context_length": 256,
+                "context_length": 512,
                 "num_heads": 4,
-                "layers": 4,
+                "layers": 6,
                 "dropout": 0.2,
             },
             "gpt2": {
@@ -89,7 +89,7 @@ class TrainConfig:
             "gpt2-mini": {
                 "training_steps": 100000,
                 "max_lr": 5e-4,
-                "batch_size": 16,
+                "batch_size": 64,
                 "weight_decay": 0.1,
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
@@ -104,7 +104,7 @@ class TrainConfig:
                 "weight_decay": 0.01,
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
-                "warmup_steps": 500,
+                "warmup_steps": 2000,
                 "early_stopper_patience": 10,
                 "info_decay": 30,
             }

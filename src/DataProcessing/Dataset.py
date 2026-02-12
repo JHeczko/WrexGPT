@@ -2,8 +2,11 @@ import torch
 import numpy as np
 
 class ShakespeareDataset(torch.utils.data.Dataset):
-    def __init__(self, tokens_path, context_len):
-        self.tokens = np.load(tokens_path, mmap_mode="r")
+    def __init__(self, tokens_path, context_len, tokens = None):
+        if tokens is None:
+            self.tokens = np.load(tokens_path, mmap_mode="r")
+        else:
+            self.tokens = tokens
         self.context_len = context_len
 
     def __len__(self):
