@@ -23,9 +23,9 @@ class ModelConfig:
         """
         configs = {
             "gpt2-mini": {
-                "dim_embedded": 512,
-                "context_length": 512,
-                "num_heads": 4,
+                "dim_embedded": 384,
+                "context_length": 256,
+                "num_heads": 6,
                 "layers": 6,
                 "dropout": 0.2,
             },

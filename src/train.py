@@ -10,9 +10,6 @@ if __name__ == "__main__":
     gpt_config = ModelConfig.from_preset("gpt2-mini")
     train_config = TrainConfig.from_preset("gpt2-mini")
 
-    print(gpt_config)
-    print(train_config)
-
     model = WrexGPT(config = gpt_config)
 
     tokens = np.load("./dataset/input_tokens.npy")
@@ -33,7 +30,11 @@ if __name__ == "__main__":
 
     # updating number of iters in order to have 300 epochs
     epochs = 300
+    print(len(train_loader)*epochs - train_config.warmup_steps)
     train_config.training_steps = len(train_loader)*epochs - train_config.warmup_steps
+
+    print(gpt_config)
+    print(train_config)
 
     earlystopper = EarlyStopping(patience=train_config.early_stopper_patience, path="./checkpoints/best_model.pt")
 
