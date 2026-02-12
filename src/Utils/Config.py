@@ -18,9 +18,10 @@ class TrainConfig:
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     # mixed precision
-    use_amp: bool = False
+    use_amp: bool =True
+    scale_factor: float = 2.0
 
     # optional: scheduler
-    warmup_steps: int = 0
+    warmup_steps: int = 2000
 
     padding_token: int = 50257

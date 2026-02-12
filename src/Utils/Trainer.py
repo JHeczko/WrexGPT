@@ -13,7 +13,7 @@ from .Config import TrainConfig, ConfigGPT2
 
 
 class GPT2Trainer:
-    def __init__(self, model: nn.Module, config: TrainConfig, train_loader, val_loader=None):
+    def __init__(self, model: nn.Module, config: TrainConfig, train_loader, val_loader=None, checkpoint_path=""):
         self.model = model
         self.config = config
         self.train_loader = train_loader
@@ -26,12 +26,47 @@ class GPT2Trainer:
         self.scaler = torch.amp.GradScaler(device=config.device, enabled=(config.use_amp and "cuda" in config.device))
 
         self.global_step = 0
+        self.current_epoch = 0
 
-        warmup = LinearLR(self.optimizer, start_factor=1e-8, end_factor=self.config.max_lr, total_iters=config.warmup_steps)
+        self.path = checkpoint_path
 
-        cosine = CosineAnnealingLR(self.optimizer, T_max=config.max_lr, eta_min=0)
+        self.total_iters = self.train_loader.__len__() * self.config.epochs
 
-        self.scheduler = None
+        warmup = LinearLR(self.optimizer, start_factor=1e-8, end_factor=1.0, total_iters=config.warmup_steps)
+        cosine = CosineAnnealingLR(self.optimizer, T_max=self.total_iters-self.config.warmup_steps, eta_min=0)
+        self.scheduler = SequentialLR(optimizer=self.optimizer, schedulers=[warmup, cosine], milestones=[self.config.warmup_steps])
+
+    def load_checkpoint(self):
+        checkpoint = torch.load(self.path, map_location=self.config.device)
+
+        self.model.load_state_dict(checkpoint["model_state_dict"])
+        self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+
+        if self.scheduler and checkpoint["scheduler_state_dict"] is not None:
+            self.scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+
+        if self.config.use_amp and checkpoint["scaler_state_dict"] is not None:
+            self.scaler.load_state_dict(checkpoint["scaler_state_dict"])
+
+        self.global_step = checkpoint["global_step"]
+        self.current_epoch = checkpoint["current_epoch"]
+
+        print(f"Checkpoint loaded from {self.path}")
+
+    def __save_checkpoint(self):
+
+        checkpoint = {
+            "epoch": self.current_epoch,
+            "global_step": self.global_step,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scheduler_state_dict": self.scheduler.state_dict() if self.scheduler else None,
+            "scaler_state_dict": self.scaler.state_dict() if self.config.use_amp else None,
+            "config": self.config.__dict__
+        }
+
+        torch.save(checkpoint, self.path)
+        print(f"Checkpoint saved to {self.path}")
 
     def __calculate_loss(self, logits, y):
         # logits = (B, T, V)
@@ -77,7 +112,7 @@ class GPT2Trainer:
                 self.scaler.scale(loss).backward()
 
                 self.scaler.unscale_(self.optimizer)
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_clip)
+                torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(), max_norm=self.config.grad_clip)
 
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
@@ -98,6 +133,8 @@ class GPT2Trainer:
             running_loss += loss.item()
             running_acc += self.__calculate_accuracy(logits.detach(), y)
             total_batches += 1
+
+        self.current_epoch += 1
 
         avg_loss = running_loss / max(1,total_batches)
         avg_acc = running_acc / max(1,total_batches)
