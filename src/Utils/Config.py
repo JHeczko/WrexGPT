@@ -11,6 +11,7 @@ class ModelConfig:
     num_heads: int
     layers: int
     dropout: float
+    gradient_checkpointing: bool = True
     vocab_size: int = 50258
     padding_token: int = 50257
 
@@ -22,6 +23,13 @@ class ModelConfig:
             preset: Either "gpt2" or "gpt2-mini"
         """
         configs = {
+            "gpt2-test": {
+                "dim_embedded": 2,
+                "context_length": 2,
+                "num_heads": 1,
+                "layers": 1,
+                "dropout": 0.2,
+            },
             "gpt2-mini": {
                 "dim_embedded": 384,
                 "context_length": 256,
@@ -60,9 +68,10 @@ class ModelConfig:
 @dataclass
 class TrainConfig:
     """Base training configuration that can be initialized for different GPT-2 variants."""
-    training_steps: int
+    epochs: int
     max_lr: float
     batch_size: int
+    accumulation_batch_size: int
     weight_decay: float
     grad_clip: float
     device: str
@@ -86,27 +95,41 @@ class TrainConfig:
             preset: Either "gpt2" or "gpt2-mini"
         """
         configs = {
-            "gpt2-mini": {
-                "training_steps": 4749500, # eqiuvalent of 300 epochs during training
+            "gpt2-test": {
+                "epochs": 1,
                 "max_lr": 5e-4,
-                "batch_size": 64,
+                "batch_size": 512,
+                "accumulation_batch_size": 1024,
                 "weight_decay": 0.1,
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
                 "warmup_steps": 500,
                 "early_stopper_patience": 10,
-                "info_decay": 1000,
+                "info_decay": 100000,
+            },
+            "gpt2-mini": {
+                "epochs": 100,
+                "max_lr": 5e-4,
+                "batch_size": 16,
+                "accumulation_batch_size": 64,
+                "weight_decay": 0.1,
+                "grad_clip": 1.0,
+                "scale_factor": 2.0,
+                "warmup_steps": 500,
+                "early_stopper_patience": 17,
+                "info_decay": 10000,
             },
             "gpt2": {
-                "training_steps": 355500, # equivalent of 300 epochs during training
+                "epochs": 100,
                 "max_lr": 2.5e-4,
-                "batch_size": 256,
+                "batch_size": 4,
+                "accumulation_batch_size": 64,
                 "weight_decay": 0.01,
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
                 "warmup_steps": 2000,
-                "early_stopper_patience": 10,
-                "info_decay": 30,
+                "early_stopper_patience": 17,
+                "info_decay": 10000,
             }
         }
 

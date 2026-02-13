@@ -28,13 +28,13 @@ if __name__ == "__main__":
         train_loader = DataLoader(dataset=train_ds, batch_size=train_config.batch_size, shuffle=True)
         val_loader = DataLoader(dataset=val_ds, batch_size=train_config.batch_size, shuffle=True)
 
-    # updating number of iters in order to have 300 epochs
-    epochs = 300
-    print(len(train_loader)*epochs - train_config.warmup_steps)
-    train_config.training_steps = len(train_loader)*epochs - train_config.warmup_steps
 
     print(gpt_config)
     print(train_config)
+
+    print("Dataset token size: ", len(tokens))
+    print("Train loader batches: ", len(train_loader))
+    print("Val loader batches: ", len(val_loader))
 
     earlystopper = EarlyStopping(patience=train_config.early_stopper_patience, path="./checkpoints/best_model.pt")
 

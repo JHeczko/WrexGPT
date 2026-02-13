@@ -8,7 +8,7 @@ class WrexGPT(nn.Module):
     def __init__(self, config: Utils.ModelConfig):
         super().__init__()
         self.config = config
-        self.gradient_checkpointing = True
+        self.gradient_checkpointing = config.gradient_checkpointing
 
         self.embedding = nn.Embedding(config.vocab_size, config.dim_embedded)
         self.positional_encoding = Layers.PositionalEncoding(config.context_length, config.dim_embedded)
