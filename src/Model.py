@@ -8,7 +8,7 @@ class WrexGPT(nn.Module):
     def __init__(self, config: Utils.ModelConfig):
         super().__init__()
         self.config = config
-
+        self.gradient_checkpointing = True
 
         self.embedding = nn.Embedding(config.vocab_size, config.dim_embedded)
         self.positional_encoding = Layers.PositionalEncoding(config.context_length, config.dim_embedded)
@@ -74,8 +74,10 @@ class WrexGPT(nn.Module):
 
         # now grind through transformers
         for transformer in self.transformers:
-            x = transformer(x, mask_pad)
-
+            if self.gradient_checkpointing and self.training:
+                x = torch.utils.checkpoint.checkpoint(transformer, x, mask_pad, use_reentrant=False)
+            else:
+                x = transformer(x, mask_pad)
         # finally normalization and linear layer
         # x = (batch_size, context_len, vocab_size)
         x = self.out_ln(x)
