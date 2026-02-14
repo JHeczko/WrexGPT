@@ -2,13 +2,17 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
-from DataProcessing import ShakespeareDataset
+from DataProcessing import ShakespeareDataset, ShakespeareDatasetWithStride
 from Model import WrexGPT
 from Utils import ModelConfig, TrainConfig, GPT2Trainer, EarlyStopping
 
+from matplotlib import pyplot as plt
+
 if __name__ == "__main__":
-    gpt_config = ModelConfig.from_preset("gpt2-mini")
-    train_config = TrainConfig.from_preset("gpt2-mini")
+    gpt_config = ModelConfig.from_preset("gpt2-test")
+    train_config = TrainConfig.from_preset("gpt2-test")
+    # train_config.epochs = 5
+    # train_config.total_steps = -1
 
     model = WrexGPT(config = gpt_config)
 
@@ -18,7 +22,7 @@ if __name__ == "__main__":
     train_data = tokens[:int(split * len(tokens))]
     val_data = tokens[int(split * len(tokens)):]
 
-    train_ds = ShakespeareDataset("", gpt_config.context_length, train_data)
+    train_ds = ShakespeareDatasetWithStride("", gpt_config.context_length, train_data, stride=gpt_config.context_length/2, padding_token=train_config.padding_token)
     val_ds = ShakespeareDataset("", gpt_config.context_length, val_data)
 
     if torch.cuda.is_available():
@@ -38,6 +42,12 @@ if __name__ == "__main__":
 
     earlystopper = EarlyStopping(patience=train_config.early_stopper_patience, path="./checkpoints/best_model.pt")
 
-    trainer = GPT2Trainer(model=model, config=train_config, train_loader=train_loader, val_loader=val_loader, checkpoint_path="./checkpoints/checkpoint.pt")
+    trainer = GPT2Trainer(model=model, config=train_config, train_loader=train_loader, val_loader=val_loader, checkpoint_path="./checkpoints/checkpoint.pt", earlystopper=earlystopper)
 
-    trainer.train(revive_mode=False)
+    #history = trainer.train_epochs(revive_mode=False)
+    history = trainer.train_steps(revive_mode=True)
+
+    plt.plot(history["lr"])
+    plt.show()
+
+    print(history)

@@ -9,7 +9,7 @@ from .Config import TrainConfig
 
 
 class GPT2Trainer:
-    def __init__(self, model: nn.Module, config: TrainConfig, train_loader, val_loader=None, earlystoper=None, checkpoint_path=""):
+    def __init__(self, model: nn.Module, config: TrainConfig, train_loader, val_loader=None, earlystopper=None, checkpoint_path="./checkpoint.pt"):
         self.model = model
         self.model.to(config.device)
 
@@ -18,7 +18,7 @@ class GPT2Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
 
-        self.earlystopper = earlystoper
+        self.earlystopper = earlystopper
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.config.padding_token)
 
@@ -41,31 +41,44 @@ class GPT2Trainer:
             "val_loss": [],
             "val_acc": [],
             "val_ppl": [],
+            "lr": []
         }
 
-        self.epochs = self.config.epochs
 
         if (self.config.accumulation_batch_size % self.config.batch_size != 0) or (self.config.accumulation_batch_size < self.config.batch_size):
             raise ValueError("Accumulated batch size has to be divisible by batch size and accumulated batch size cannot be less than batch size.")
         self.accumulation_step = self.config.accumulation_batch_size // self.config.batch_size
 
-        # calculating all steps based on dataloader len and accumulation step size
-        self.total_steps = math.ceil((len(self.train_loader)/self.accumulation_step)*self.epochs)
-        training_steps = self.total_steps - self.config.warmup_steps
+        if (self.config.epochs == -1 and self.config.total_steps == -1):
+            raise ValueError("Bruh give number of epochs or total steps")
+        elif (self.config.epochs != -1 and self.config.total_steps != -1):
+            raise ValueError("Please specify only one epoch or total steps")
 
+        warmup_steps = 0
+        cosine_steps = 0
 
-        # settuping schedulers
-        if (self.config.accumulation_batch_size % self.config.batch_size != 0) or (self.config.accumulation_batch_size < self.config.batch_size):
-            raise ValueError("Accumulated batch size has to be divisible by batch size and accumulated batch size cannot be less than batch size.")
+        if self.config.epochs != -1:
+            self.epochs = self.config.epochs
+
+            # calculating all steps based on dataloader len and accumulation step size
+            self.total_steps = math.ceil((len(self.train_loader)/self.accumulation_step)*self.epochs)
+            warmup_steps = self.config.warmup_steps
+            cosine_steps = self.total_steps - self.config.warmup_steps
+        elif self.config.total_steps != -1:
+            self.total_steps = self.config.total_steps
+            self.epochs = self.config.epochs
+            warmup_steps = self.config.warmup_steps
+            cosine_steps = self.total_steps - self.config.warmup_steps
+
 
 
         warmup = LinearLR(self.optimizer,
                   start_factor=1e-8,
                   end_factor=1.0,
-                  total_iters=self.config.warmup_steps)
+                  total_iters=max(0,warmup_steps))
 
         cosine = CosineAnnealingLR(self.optimizer,
-                                   T_max= training_steps,
+                                   T_max= max(0,cosine_steps),
                                    eta_min=0)
 
         self.scheduler = SequentialLR(
@@ -118,7 +131,6 @@ class GPT2Trainer:
         }
 
         torch.save(checkpoint, self.path)
-        print(f"Checkpoint saved to {self.path}")
 
     def __calculate_loss(self, logits, y):
         # logits = (B, T, V)
@@ -152,14 +164,15 @@ class GPT2Trainer:
         self.model.train()
         self.optimizer.zero_grad(set_to_none=True)
 
+        local_accumulation_step = self.accumulation_step
+
         for i,(X, y) in enumerate(tqdm(self.train_loader, desc=f"Training {self.current_epoch+1}", leave=False)):
             X,y = X.to(self.config.device, non_blocking=True), y.to(self.config.device, non_blocking=True)
-
             if self.config.use_amp:
                 with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                     logits = self.model(X)
                     raw_loss = self.__calculate_loss(logits, y)
-                    loss = raw_loss / self.accumulation_step
+                    loss = raw_loss / local_accumulation_step
 
                 self.scaler.scale(loss).backward()
 
@@ -178,10 +191,12 @@ class GPT2Trainer:
                     self.optimizer.zero_grad(set_to_none=True)
 
                     self.current_step += 1
+                    local_accumulation_step = min(self.accumulation_step, len(self.train_loader) - (i + 1))
+
             else:
                 logits = self.model(X)
                 raw_loss = self.__calculate_loss(logits, y)
-                loss = raw_loss / self.accumulation_step
+                loss = raw_loss / local_accumulation_step
 
                 loss.backward()
 
@@ -198,24 +213,12 @@ class GPT2Trainer:
                     self.optimizer.zero_grad(set_to_none=True)
 
                     self.current_step += 1
-
+                    local_accumulation_step = min(self.accumulation_step, len(self.train_loader) - (i + 1))
 
             # LOSS AND ACC CALCULATION
             running_loss += raw_loss.item()
             running_acc += self.__calculate_accuracy(logits.detach(), y)
             total_batches += 1
-
-            # ADDITIONAL VALIDATION
-            if (self.current_step+1)%self.config.info_decay == 0:
-                val_loss, val_acc, val_ppl = self.__validate_model()
-
-                tqdm.tqdm.write(
-                    f"[Step {self.current_step}] "
-                    f"Avg Train Loss: {running_loss / total_batches:.4f} | "
-                    f"Val Loss: {val_loss:.4f} | Val PPL: {val_ppl:.2f}"
-                )
-
-                self.model.train()
 
 
 
@@ -225,8 +228,6 @@ class GPT2Trainer:
         ppl = math.exp(min(avg_loss, 20))
 
         return avg_loss, avg_acc, ppl
-
-
 
     @torch.no_grad()
     def __validate_model(self):
@@ -239,7 +240,7 @@ class GPT2Trainer:
         total_acc = 0.0
         n_batches = 0
 
-        for x, y in tqdm(self.val_loader, desc="Validating", leave=False):
+        for x, y in self.val_loader:
             x = x.to(self.config.device, non_blocking=True)
             y = y.to(self.config.device, non_blocking=True)
 
@@ -257,7 +258,9 @@ class GPT2Trainer:
 
         return avg_loss, avg_acc, ppl
 
-    def train(self, revive_mode=False):
+    def train_epochs(self, revive_mode=False):
+        if self.config.epochs == -1:
+            raise ValueError("Number of epochs cannot be -1. Please speicfy nubmer of epochs.")
 
         if revive_mode:
             self.__load_checkpoint()
@@ -265,11 +268,13 @@ class GPT2Trainer:
         print("=" * 80)
         print("Starting training...")
         print(f"Total epochs: {self.epochs}")
+        print(f"Current epoch: {self.current_epoch}")
         print("=" * 80)
 
         for epoch in tqdm(range(self.current_epoch, self.epochs), desc=f"Epoch {self.current_epoch+1}/{self.epochs}"):
 
             train_loss, train_acc, train_ppl = self.__train_epoch()
+            print("\nValidating... ", end='')
             val_loss, val_acc, val_ppl = self.__validate_model()
 
             self.history["test_loss"].append(train_loss)
@@ -278,6 +283,7 @@ class GPT2Trainer:
             self.history["val_loss"].append(val_loss)
             self.history["val_acc"].append(val_acc)
             self.history["val_ppl"].append(val_ppl)
+            self.history["lr"].append(self.optimizer.param_groups[0]['lr'])
 
             # ======== PRINT RESULTS ========
             print(f"\nEpoch [{epoch + 1}/{self.epochs}]")
@@ -303,4 +309,147 @@ class GPT2Trainer:
 
 
         print("\nTraining finished.")
+        return self.history
+
+    def train_steps(self, revive_mode=False):
+        if self.config.total_steps == -1:
+            raise ValueError("total_steps cannot be -1. Specify the number of steps")
+
+        if revive_mode:
+            self.__load_checkpoint()
+
+        print("=" * 80)
+        print("Starting training...")
+        print(f"Total steps: {self.total_steps}")
+        print(f"Current step: {self.current_step}")
+        print("=" * 80)
+
+        progress_bar = tqdm(total=self.total_steps)
+        progress_bar.update(self.current_step)
+        progress_bar.refresh()
+
+        running_loss = 0.0
+        running_acc = 0.0
+        total_batches = 0
+
+        self.model.train()
+        self.optimizer.zero_grad(set_to_none=True)
+
+        if self.current_step >= self.total_steps:
+            working = False
+        else:
+            working = True
+
+        while working:
+            local_accumulation_step = self.accumulation_step
+            for i, (X, y) in enumerate(self.train_loader):
+                X, y = X.to(self.config.device, non_blocking=True), y.to(self.config.device, non_blocking=True)
+
+                # COMPUTING AND STEPPING
+                if self.config.use_amp:
+                    with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+                        logits = self.model(X)
+                        raw_loss = self.__calculate_loss(logits, y)
+                        loss = raw_loss / local_accumulation_step
+
+                    self.scaler.scale(loss).backward()
+
+                    # doing gradient step only after "accumulation_step"
+                    if (i + 1) % self.accumulation_step == 0 or (i + 1) >= len(self.train_loader):
+                        self.scaler.unscale_(self.optimizer)
+                        torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(),
+                                                       max_norm=self.config.grad_clip)
+
+                        self.scaler.step(self.optimizer)
+                        if self.scheduler is not None:
+                            self.scheduler.step()
+
+                        self.scaler.update()
+
+                        # gradient reset
+                        self.optimizer.zero_grad(set_to_none=True)
+
+                        self.current_step += 1
+                        progress_bar.update(1)
+                        local_accumulation_step = min(self.accumulation_step, len(self.train_loader) - (i+1))
+                else:
+                    logits = self.model(X)
+                    raw_loss = self.__calculate_loss(logits, y)
+                    loss = raw_loss / local_accumulation_step
+
+                    loss.backward()
+
+                    # doing gradient step only after "accumulation_step"
+                    if (i + 1) % self.accumulation_step == 0 or (i + 1) >= len(self.train_loader):
+
+                        torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.config.grad_clip)
+
+                        self.optimizer.step()
+                        if self.scheduler is not None:
+                            self.scheduler.step()
+
+                        # gradient reset
+                        self.optimizer.zero_grad(set_to_none=True)
+
+                        self.current_step += 1
+                        progress_bar.update(1)
+                        local_accumulation_step = min(self.accumulation_step, len(self.train_loader) - (i+1))
+
+
+
+                # LOSS AND ACC CALCULATION
+                running_loss += raw_loss.item()
+                running_acc += self.__calculate_accuracy(logits.detach(), y)
+                total_batches += 1
+
+                # INFO CHECKPOINT
+                if ((self.current_step % self.config.info_decay == 0) and ((i + 1) % self.accumulation_step == 0 or (i + 1) >= len(self.train_loader))) or (self.current_step == 0 and i == 0):
+                    # STATISTICS
+                    print("\nValidating... ", end='')
+
+                    train_loss = running_loss / max(1, total_batches)
+                    train_acc = running_acc / max(1, total_batches)
+                    train_ppl = math.exp(min(train_loss, 20))
+
+                    val_loss, val_acc, val_ppl = self.__validate_model()
+
+                    # saving hisotry
+                    self.history["test_loss"].append(train_loss)
+                    self.history["test_acc"].append(train_acc)
+                    self.history["test_ppl"].append(train_ppl)
+                    self.history["val_loss"].append(val_loss)
+                    self.history["val_acc"].append(val_acc)
+                    self.history["val_ppl"].append(val_ppl)
+                    self.history["lr"].append(self.optimizer.param_groups[0]['lr'])
+
+                    # reset stats
+                    running_loss = 0.0
+                    running_acc = 0.0
+                    total_batches = 0
+
+                    # write down
+                    print(
+                        f"[Step {self.current_step}] "
+                        f"Train Loss: {train_loss:.4f} | Train acc: {train_acc:.4f} | "
+                        f"Val Loss: {val_loss:.4f} | Val acc: {val_acc:.4f}"
+                    )
+
+                    # early stopper step
+                    if self.earlystopper is not None:
+                        if self.earlystopper.step(val_loss, self.model, self.current_step):
+                            working = False
+                            break
+
+                    self.model.train()
+
+                # SAVING CHECKPOINT
+                if (self.current_step % self.config.checkpoint_decay == 0) and ((i + 1) % self.accumulation_step == 0 or (i + 1) >= len(self.train_loader)):
+                    print("\nCheckpoint... ")
+                    self.__save_checkpoint()
+
+                # BREAKING OUT THE LOOP
+                if  self.current_step >= self.total_steps:
+                    working = False
+                    break
+
         return self.history

@@ -68,7 +68,7 @@ class ModelConfig:
 @dataclass
 class TrainConfig:
     """Base training configuration that can be initialized for different GPT-2 variants."""
-    epochs: int
+    total_steps: int
     max_lr: float
     batch_size: int
     accumulation_batch_size: int
@@ -77,8 +77,10 @@ class TrainConfig:
     device: str
     scale_factor: float
     info_decay: int
+    checkpoint_decay: int
     warmup_steps: int
     early_stopper_patience: int
+    epochs: int = -1
     padding_token: int = 50257
     use_amp: bool = None
 
@@ -96,31 +98,34 @@ class TrainConfig:
         """
         configs = {
             "gpt2-test": {
-                "epochs": 1,
+                "total_steps": 100,
                 "max_lr": 5e-4,
-                "batch_size": 512,
+                "batch_size": 256,
                 "accumulation_batch_size": 1024,
                 "weight_decay": 0.1,
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
-                "warmup_steps": 500,
+                "warmup_steps": 10,
                 "early_stopper_patience": 10,
-                "info_decay": 100000,
+                "info_decay": 10,
+                "checkpoint_decay": 10
             },
             "gpt2-mini": {
-                "epochs": 100,
+                "total_steps": 100000,
                 "max_lr": 5e-4,
                 "batch_size": 16,
                 "accumulation_batch_size": 64,
                 "weight_decay": 0.1,
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
-                "warmup_steps": 500,
-                "early_stopper_patience": 17,
-                "info_decay": 10000,
+                "warmup_steps": 2000,
+                "early_stopper_patience": 15,
+                "info_decay": 500,
+                "checkpoint_decay": 500
+
             },
             "gpt2": {
-                "epochs": 100,
+                "total_steps": 100000,
                 "max_lr": 2.5e-4,
                 "batch_size": 4,
                 "accumulation_batch_size": 64,
@@ -129,7 +134,8 @@ class TrainConfig:
                 "scale_factor": 2.0,
                 "warmup_steps": 2000,
                 "early_stopper_patience": 17,
-                "info_decay": 10000,
+                "info_decay": 2000,
+                "checkpoint_decay": 2000
             }
         }
 
