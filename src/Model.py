@@ -88,7 +88,7 @@ class WrexGPT(nn.Module):
 
 
 if __name__ == "__main__":
-    config = Utils.ConfigGPT2(
+    config = Utils.ModelConfig(
         dim_embedded=12,
         vocab_size=500,
         context_length=12,

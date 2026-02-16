@@ -14,8 +14,8 @@ class TransformerDecoder(nn.Module):
 
         self.mlp = MultiLayerPerceptron(dim_in=self.dim_embedded, dim_hidden=self.dim_embedded*4)
 
-        self.ln1 = nn.LayerNorm(self.dim_embedded, elementwise_affine=False)
-        self.ln2 = nn.LayerNorm(self.dim_embedded, elementwise_affine=False)
+        self.ln1 = nn.LayerNorm(self.dim_embedded)
+        self.ln2 = nn.LayerNorm(self.dim_embedded)
 
         self.dropout_attn = nn.Dropout(dropout)
         self.dropout_mlp = nn.Dropout(dropout)
