@@ -1,6 +1,6 @@
 from torch import nn
-import Utils
-import Layers
+import src.Utils as Utils
+import src.Layers as Layers
 import torch
 
 # GPT-2 Pretrained only

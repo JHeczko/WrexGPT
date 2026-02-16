@@ -2,21 +2,18 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
-from Data import ShakespeareDataset, ShakespeareDatasetWithStride
-from Model import WrexGPT
-from Utils import ModelConfig, TrainConfig, GPT2Trainer, EarlyStopping
+from src.Data import ShakespeareDataset, ShakespeareDatasetWithStride
+from src.Model import WrexGPT
+from src.Utils import ModelConfig, TrainConfig, GPT2Trainer, EarlyStopping
 
-from matplotlib import pyplot as plt
 
 if __name__ == "__main__":
-    gpt_config = ModelConfig.from_preset("gpt2-test")
-    train_config = TrainConfig.from_preset("gpt2-test")
-    # train_config.epochs = 5
-    # train_config.total_steps = -1
+    gpt_config = ModelConfig.from_preset("gpt2-mini")
+    train_config = TrainConfig.from_preset("gpt2-mini")
 
     model = WrexGPT(config = gpt_config)
 
-    tokens = np.load("./dataset/input_tokens.npy")
+    tokens = np.load("dataset/input_tokens.npy")
     split = 0.9
 
     train_data = tokens[:int(split * len(tokens))]
@@ -45,9 +42,4 @@ if __name__ == "__main__":
     trainer = GPT2Trainer(model=model, config=train_config, train_loader=train_loader, val_loader=val_loader, checkpoint_path="./checkpoints/checkpoint.pt", earlystopper=earlystopper)
 
     #history = trainer.train_epochs(revive_mode=False)
-    history = trainer.train_steps(revive_mode=True)
-
-    plt.plot(history["lr"])
-    plt.show()
-
-    print(history)
+    history = trainer.train_steps(revive_mode=False)

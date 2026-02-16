@@ -2,15 +2,15 @@ import numpy as np
 import tiktoken
 import ftfy
 
-from Data import Tokenizer
+from src.Data import Tokenizer
 
 # do it only once to tokenize data and save it to numpy file
 if __name__ == '__main__':
     tokenizer_class = Tokenizer()
 
 
-    input_path = "./dataset/input.txt"
-    out_path = "./dataset/input_tokens.npy"
+    input_path = "dataset/input.txt"
+    out_path = "dataset/input_tokens.npy"
 
     with open(input_path, "r", encoding="utf-8") as f:
         text = f.read()

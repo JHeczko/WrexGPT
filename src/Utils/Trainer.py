@@ -19,6 +19,7 @@ class GPT2Trainer:
         self.val_loader = val_loader
 
         self.earlystopper = earlystopper
+        self.is_earlystopped = False
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.config.padding_token)
 
@@ -104,6 +105,8 @@ class GPT2Trainer:
         if checkpoint["earlystopper_state_dict"] is not None and self.earlystopper is not None:
             self.earlystopper.load_state_dict(checkpoint["earlystopper_state_dict"])
 
+        self.is_earlystopped = checkpoint["is_earlystopped"]
+
         self.history = checkpoint["history"]
 
         self.path = checkpoint["path"]
@@ -125,6 +128,7 @@ class GPT2Trainer:
             "optimizer_state_dict": self.optimizer.state_dict(),
             "scheduler_state_dict": self.scheduler.state_dict() if self.scheduler else None,
             "earlystopper_state_dict": self.earlystopper.state_dict() if self.earlystopper else None,
+            "is_earlystopped": self.is_earlystopped,
             "scaler_state_dict": self.scaler.state_dict() if self.config.use_amp else None,
             "history": self.history,
             "config": self.config.__dict__
@@ -265,6 +269,10 @@ class GPT2Trainer:
         if revive_mode:
             self.__load_checkpoint()
 
+        # if we were early stopped we do not go with training
+        if self.is_earlystopped:
+            return self.history
+
         print("=" * 80)
         print("Starting training...")
         print(f"Total epochs: {self.epochs}")
@@ -298,7 +306,8 @@ class GPT2Trainer:
                 should_stop = self.earlystopper.step(val_loss, self.model, epoch)
 
                 if should_stop:
-                    print("\nEarly stopping triggered.")
+                    self.is_earlystopped = True
+                    print("\nCheckpoint and early stopping... ")
                     break
 
             # ======== UPDATE EPOCHS ========
@@ -317,6 +326,10 @@ class GPT2Trainer:
 
         if revive_mode:
             self.__load_checkpoint()
+
+        # if we were early stopped we do not go with training
+        if self.is_earlystopped:
+            return self.history
 
         print("=" * 80)
         print("Starting training...")
@@ -437,6 +450,9 @@ class GPT2Trainer:
                     # early stopper step
                     if self.earlystopper is not None:
                         if self.earlystopper.step(val_loss, self.model, self.current_step):
+                            self.is_earlystopped = True
+                            print("\nCheckpoint and early stopping... ")
+                            self.__save_checkpoint()
                             working = False
                             break
 

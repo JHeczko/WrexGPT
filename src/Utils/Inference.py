@@ -1,24 +1,22 @@
 import torch
 import torch.nn.functional as F
-from torch import nn
-
-import numpy as np
 
 from src.Data import Tokenizer
 from .Config import ModelConfig
 
 
 class AutoregressiveGenerator:  # Nie musi dziedziczyć po nn.Module, jeśli nie ma trenowalnych parametrów
-    def __init__(self, model, config, device):
+    def __init__(self, model, config: ModelConfig, device):
         self.model = model
         self.config = config
         self.tokenizer = Tokenizer()  # Przekazujemy instancję, a nie tworzymy nową
         self.device = device
         self.model.to(self.device)
-        self.model.eval()
+
 
     @torch.no_grad()
     def generate(self, text: str, max_new_tokens: int = 50, temperature=1.0, top_k=None, greedy=True):
+        self.model.eval()
         tokens = torch.tensor(self.tokenizer.encode(text), dtype=torch.long, device=self.device)
         # added bacth
         tokens = tokens.view(1,-1)

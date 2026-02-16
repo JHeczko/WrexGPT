@@ -1,6 +1,5 @@
 from torch import nn
 import torch
-from torch.nn.functional import layer_norm
 
 
 class MultiLayerPerceptron(nn.Module):

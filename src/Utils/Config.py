@@ -133,7 +133,7 @@ class TrainConfig:
                 "grad_clip": 1.0,
                 "scale_factor": 2.0,
                 "warmup_steps": 2000,
-                "early_stopper_patience": 17,
+                "early_stopper_patience": 20,
                 "info_decay": 2000,
                 "checkpoint_decay": 2000
             }

@@ -52,8 +52,8 @@ class ShakespeareDatasetWithStride(torch.utils.data.Dataset):
         return x,y
 
 if __name__ == "__main__":
-    dataset = ShakespeareDataset("../dataset/input_tokens.npy", context_len=8, tokens=[i for i in range(563)])
-    dataset_1 = ShakespeareDatasetWithStride("../dataset/input_tokens.npy", context_len=64, tokens=[i for i in range(563)], stride=56)
+    dataset = ShakespeareDataset("../../dataset/input_tokens.npy", context_len=8, tokens=[i for i in range(563)])
+    dataset_1 = ShakespeareDatasetWithStride("../../dataset/input_tokens.npy", context_len=64, tokens=[i for i in range(563)], stride=56)
 
     ds_loader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=False)
     ds1_loader = torch.utils.data.DataLoader(dataset_1, batch_size=2, shuffle=False)
