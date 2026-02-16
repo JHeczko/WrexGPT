@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # val_ds = ShakespeareDatasetWithStride("", gpt_config.context_length, val_data, stride=math.ceil(gpt_config.context_length/8), padding_token=train_config.padding_token)
 
     train_ds = ShakespeareDataset("", context_len=gpt_config.context_length, tokens=train_data)
-    val_ds = ShakespeareDataset("", context_len=gpt_config.context_length, tokens=train_data)
+    val_ds = ShakespeareDataset("", context_len=gpt_config.context_length, tokens=val_data)
 
     if torch.cuda.is_available():
         train_loader = DataLoader(dataset=train_ds, batch_size=train_config.batch_size, shuffle=True, pin_memory=True)
