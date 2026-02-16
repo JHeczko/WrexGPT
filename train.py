@@ -2,6 +2,8 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
+import math
+
 from src.Data import ShakespeareDataset, ShakespeareDatasetWithStride
 from src.Model import WrexGPT
 from src.Utils import ModelConfig, TrainConfig, GPT2Trainer, EarlyStopping
@@ -19,8 +21,8 @@ if __name__ == "__main__":
     train_data = tokens[:int(split * len(tokens))]
     val_data = tokens[int(split * len(tokens)):]
 
-    train_ds = ShakespeareDatasetWithStride("", gpt_config.context_length, train_data, stride=gpt_config.context_length/2, padding_token=train_config.padding_token)
-    val_ds = ShakespeareDataset("", gpt_config.context_length, val_data)
+    train_ds = ShakespeareDatasetWithStride("", gpt_config.context_length, train_data, stride=math.ceil(gpt_config.context_length/4), padding_token=train_config.padding_token)
+    val_ds = ShakespeareDatasetWithStride("", gpt_config.context_length, val_data, stride=math.ceil(gpt_config.context_length/8), padding_token=train_config.padding_token)
 
     if torch.cuda.is_available():
         train_loader = DataLoader(dataset=train_ds, batch_size=train_config.batch_size, shuffle=True, pin_memory=True)
