@@ -51,5 +51,6 @@ if __name__ == "__main__":
 
     trainer = GPT2Trainer(model=model, config=train_config, train_loader=train_loader, val_loader=val_loader, checkpoint_path="./checkpoint.pt", earlystopper=earlystopper)
 
-    #history = trainer.train_epochs(revive_mode=False)
     history = trainer.train_steps(revive_mode=False)
+
+    print("Training finished")
