@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 import numpy as np
 
-from DataProcessing import ShakespeareDataset, ShakespeareDatasetWithStride
+from Data import ShakespeareDataset, ShakespeareDatasetWithStride
 from Model import WrexGPT
 from Utils import ModelConfig, TrainConfig, GPT2Trainer, EarlyStopping
 

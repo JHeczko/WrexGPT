@@ -164,7 +164,7 @@ class GPT2Trainer:
         self.model.train()
         self.optimizer.zero_grad(set_to_none=True)
 
-        local_accumulation_step = self.accumulation_step
+        local_accumulation_step = min(self.accumulation_step, len(self.train_loader))
 
         for i,(X, y) in enumerate(tqdm(self.train_loader, desc=f"Training {self.current_epoch+1}", leave=False)):
             X,y = X.to(self.config.device, non_blocking=True), y.to(self.config.device, non_blocking=True)
@@ -341,7 +341,7 @@ class GPT2Trainer:
             working = True
 
         while working:
-            local_accumulation_step = self.accumulation_step
+            local_accumulation_step = min(self.accumulation_step, len(self.train_loader))
             for i, (X, y) in enumerate(self.train_loader):
                 X, y = X.to(self.config.device, non_blocking=True), y.to(self.config.device, non_blocking=True)
 

@@ -45,7 +45,7 @@ class WrexGPT(nn.Module):
         elif isinstance(module, nn.Embedding):
             nn.init.normal_(module.weight, mean=0, std=0.02)
 
-    # x = (batch_size, >= context_len)
+    # x = (batch_size, config.context_len >= context_len)
     def forward(self, x):
         batch_size, sentence_length = x.shape
         assert sentence_length <= self.config.context_length
