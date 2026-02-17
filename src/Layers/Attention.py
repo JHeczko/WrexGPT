@@ -51,7 +51,7 @@ class MaskedMultiHeadAttention(nn.Module):
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
 
-        # Its time to calculate the scare, aka what word matters to what word
+        # Its time to calculate the scare, aka what word matters to what word, each row is a word in sentence, and each column is how the word in sentence matter to that row word (rows = words_in_sentence, cols = how_other_words_matters_to_row)
         # now we want to have (batch_size, num_heads, context_len, context_len)
         # x = (batch_size = 2, num_heads = 8, context_len = 3, context_len = 3)
         att_score = q @ k.transpose(2, 3)
