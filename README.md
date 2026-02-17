@@ -65,22 +65,22 @@ The model is capable of:
               ▼
     ┌─────────────────────────────────────┐
     │  Transformer Decoder Stack (N×)     │
-    │  ┌──────────────────────────────┐  │
-    │  │ Layer Norm                   │  │
-    │  │ ▼                            │  │
-    │  │ Multi-Head Attention         │  │
-    │  │ Residual Connection + Dropout│  │
-    │  │ ▼                            │  │
-    │  │ Layer Norm                   │  │
-    │  │ ▼                            │  │
-    │  │ Feed-Forward Network (MLP)   │  │
-    │  │ Residual Connection + Dropout│  │
-    │  └──────────────────────────────┘  │
+    │  ┌──────────────────────────────┐   │
+    │  │ Layer Norm                   │   │
+    │  │ ▼                            │   │
+    │  │ Multi-Head Attention         │   │
+    │  │ Residual Connection + Dropout│   │
+    │  │ ▼                            │   │
+    │  │ Layer Norm                   │   │
+    │  │ ▼                            │   │
+    │  │ Feed-Forward Network (MLP)   │   │
+    │  │ Residual Connection + Dropout│   │
+    │  └──────────────────────────────┘   │
     └──────────────┬──────────────────────┘
                    │
                    ▼
         ┌──────────────────────┐
-        │ Final Layer Norm      │  (B, L, D)
+        │ Final Layer Norm     │  (B, L, D)
         └──────────┬───────────┘
                    │
                    ▼
@@ -96,11 +96,10 @@ The model is capable of:
 ```
 
 **Key Design Decisions:**
-- **Causal Masking**: Prevents attending to future tokens during training
-- **Residual Connections**: Enables training of deeper networks
-- **Layer Normalization**: Pre-normalization for stable training
-- **Gradient Checkpointing**: Memory-efficient training on limited GPUs
-- **Flash Attention-like**: Optimized attention computation
+- **Pad Masking**: Sentences can be any range beetwen `0 <= len(text) <= context_length`, because of padding and padding masks used in computing attention
+- **Gradient Checkpointing**: Memory-efficient training on limited GPUs (VRAM efficiency)
+- **Self written attention layer**: for educational purposes
+- **GPT-2 design**: project is implementation of GPT-2 model from open-AI
 
 ### Dataset
 
@@ -108,7 +107,7 @@ The project uses **Shakespeare text** (or any custom text corpus). The dataset p
 
 1. **Raw Text** → Tokenization (BPE) → NumPy Arrays
 2. **ShakespeareDataset**: Fixed-length sliding window
-3. **ShakespeareDatasetWithStride**: Optimized with configurable stride and padding
+3. **ShakespeareDatasetWithStride**: Optimized with configurable stride and padding (if `stride=1` it is not the same as dataset `ShakespeareDataset`)
 
 **Data Loading Example:**
 ```python
@@ -257,7 +256,7 @@ class Tokenizer:
 **Features:**
 - **BPE Encoding**: Byte-pair encoding compatible with OpenAI's GPT-2
 - **Text Cleaning**: Uses ftfy to normalize unicode and line endings
-- **Custom Tokens**: Adds padding token for efficient batch processing
+- **Custom Tokens**: Added padding token for efficient batch processing
 
 ---
 
@@ -333,10 +332,13 @@ class ShakespeareDatasetWithStride(torch.utils.data.Dataset):
         
         return x, y
 ```
-
-**Features:**
+`ShakespeareDataset` **Features :**:
 - **Memory Mapping**: Efficient handling of large datasets
-- **Automatic Padding**: Handles variable-length sequences
+- **Automatic and efficient `stride=1`**: In dataset below there can be padding tokens, and `stride=1` is not optimized. Here `stride=1` always, and dataset perfectly split tokens, there is **no padding tokens** in vector here
+
+`ShakespeareDatasetWithStride` **Features :**
+- **Memory Mapping**: Efficient handling of large datasets
+- **Automatic Padding**: Handles variable-length sequences, adding padding tokens if needed
 - **Configurable Stride**: Use a fraction of data for faster iteration
 
 ---
@@ -634,6 +636,11 @@ class TrainConfig:
         return cls(**configs[preset], device=device)
 ```
 
+**Features:**
+- **Pre-set configs**: you can choose from existing configs
+- **Create your own**: you can create your own configs
+- **Or modify existing!**
+
 ---
 
 ### 9. **Trainer** (`src/Utils/Trainer.py`)
@@ -691,13 +698,19 @@ class GPT2Trainer:
         # Implementation handles loading checkpoints,
         # gradient accumulation, mixed precision, etc.
         pass
+
+    def train_steps(self, revive_mode=False):
+        """Main training loop by steps"""
+        # Implementation handles loading checkpoints,
+        # gradient accumulation, mixed precision, etc.
+        pass
 ```
 
 ---
 
 ### 10. **Early Stopping** (`src/Utils/EarlyStopper.py`)
 
-Prevents overfitting:
+Prevents overfitting and saves best model by val_loss (but also can give any metric here that has attribute **less=better**):
 
 ```python
 class EarlyStopping:
@@ -953,6 +966,4 @@ This implementation prioritizes **clarity and understanding** over performance o
 - **Modular**: Easy to swap implementations
 - **Documented**: Extensive comments and examples
 - **Debuggable**: Clear tensor shape tracking
-
-Perfect for learning how transformers work from the ground up! 🚀
 
