@@ -112,7 +112,7 @@ class TrainConfig:
             },
             "gpt2-mini": {
                 "total_steps": 100000,
-                "max_lr": 5e-4,
+                "max_lr": 2.5e-4,
                 "batch_size": 16,
                 "accumulation_batch_size": 64,
                 "weight_decay": 0.1,

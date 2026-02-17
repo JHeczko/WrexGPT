@@ -37,9 +37,6 @@ class TransformerDecoder(nn.Module):
         x = self.dropout_mlp(x)
         x = x + identity
 
-        # x = x + self.dropout_attn(self.attention(self.ln1(x)))
-        # x = x + self.dropout_mlp(self.mlp(self.ln2(x)))
-
         # x = (batch_size, context_len, embedded_dim)
         return x
 

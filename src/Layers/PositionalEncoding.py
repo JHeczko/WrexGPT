@@ -9,8 +9,10 @@ class PositionalEncoding(nn.Module):
     def forward(self, sentence_length, device):
         # pos = (, context_len)
         pos = torch.arange(sentence_length, device=device, dtype=torch.long)
+
         # pos_emb = (, context_len, embedded_dim)
         pos_emb = self.position_embedding(pos)
+
         return pos_emb
 
 

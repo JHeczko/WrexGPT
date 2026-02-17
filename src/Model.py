@@ -78,6 +78,7 @@ class WrexGPT(nn.Module):
                 x = torch.utils.checkpoint.checkpoint(transformer, x, mask_pad, use_reentrant=False)
             else:
                 x = transformer(x, mask_pad)
+
         # finally normalization and linear layer
         # x = (batch_size, context_len, vocab_size)
         x = self.out_ln(x)
@@ -98,7 +99,7 @@ if __name__ == "__main__":
     )
     model = WrexGPT(config)
 
-    dummy_vec = torch.ones(10, config.context_length-4, dtype=torch.int)
+    dummy_vec = torch.ones(10, config.context_length, dtype=torch.int)
 
     out_vec = model(dummy_vec)
 

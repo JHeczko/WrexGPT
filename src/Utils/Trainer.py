@@ -172,6 +172,7 @@ class GPT2Trainer:
 
         for i,(X, y) in enumerate(tqdm(self.train_loader, desc=f"Training {self.current_epoch+1}", leave=False)):
             X,y = X.to(self.config.device, non_blocking=True), y.to(self.config.device, non_blocking=True)
+
             if self.config.use_amp:
                 with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                     logits = self.model(X)
@@ -196,7 +197,6 @@ class GPT2Trainer:
 
                     self.current_step += 1
                     local_accumulation_step = min(self.accumulation_step, len(self.train_loader) - (i + 1))
-
             else:
                 logits = self.model(X)
                 raw_loss = self.__calculate_loss(logits, y)
@@ -223,8 +223,6 @@ class GPT2Trainer:
             running_loss += raw_loss.item()
             running_acc += self.__calculate_accuracy(logits.detach(), y)
             total_batches += 1
-
-
 
         # STATISTICS
         avg_loss = running_loss / max(1,total_batches)
@@ -301,6 +299,9 @@ class GPT2Trainer:
             print(f"LR: {self.optimizer.param_groups[0]['lr']:.6e}")
             print("-" * 60)
 
+            # ======== UPDATE EPOCHS ========
+            self.current_epoch += 1
+
             # ======== EARLY STOPPING ========
             if self.earlystopper is not None:
                 should_stop = self.earlystopper.step(val_loss, self.model, epoch)
@@ -308,10 +309,8 @@ class GPT2Trainer:
                 if should_stop:
                     self.is_earlystopped = True
                     print("\nCheckpoint and early stopping... ")
+                    self.__save_checkpoint()
                     break
-
-            # ======== UPDATE EPOCHS ========
-            self.current_epoch += 1
 
             # ======== SAVE CHECKPOINT ========
             self.__save_checkpoint()
