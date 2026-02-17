@@ -32,6 +32,7 @@ class MaskedMultiHeadAttention(nn.Module):
     def forward(self, x, padding_mask=None):
         batch_size, context_length, dim_in = x.shape
 
+        # here we basicly learn the inner representation and split of our input vector
         # x = (batch_size = 2, context_len = 3, dim_out = 968)
         q = self.w_query(x)
         k = self.w_key(x)
@@ -43,35 +44,38 @@ class MaskedMultiHeadAttention(nn.Module):
         k = k.view(batch_size,context_length, self.num_heads, self.head_dim)
         v = v.view(batch_size,context_length, self.num_heads, self.head_dim)
 
-        # now we have per batch-head sample, each batch, have heads wich have specific subspace of mapping
+        # We want to have multiple heads, so we transpose in order to logically have multiple heads with each having its own dimension
+        # now we have per batch-head sample, each batch, have heads which have specific subspace of mapping
         # x = (batch_size = 2, num_heads = 8,context_len = 3, head_dim = 121)
         q = q.transpose(1, 2)
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
 
+        # Its time to calculate the scare, aka what word matters to what word
         # now we want to have (batch_size, num_heads, context_len, context_len)
         # x = (batch_size = 2, num_heads = 8, context_len = 3, context_len = 3)
         att_score = q @ k.transpose(2, 3)
         att_score = att_score / math.sqrt(self.head_dim)
 
-        # now masking
+        # now masking, we do not look into future
         # but if sentences are not == context_len then mask is truncated
         mask = self.mask.bool()[0:context_length, 0:context_length]
-        # trio mask
+        # upper triangular masking
         att_score = att_score.masked_fill_(mask, torch.finfo(att_score.dtype).min)
-        # padding mask
+        # padding masking
         if padding_mask is not None:
             att_score = att_score.masked_fill_(padding_mask, torch.finfo(att_score.dtype).min)
 
 
-
+        # instead of logits we want to have probability, focus 80% on word a and 20% on word b
         # softmax + dropout
         att_score = self.softmax(att_score)
         att_score = self.dropout(att_score)
 
+        # Now lets apply the scores to the values, we want to do multiplication as below
         # (batch_size, num_heads, context_len, context_len) * (batch_size, num_heads,context_len, head_dim)
         # we want to have once again
-        # (batch_size = 2, num_heads = 8,context_len = 3, head_dim = 121) not attention scores
+        # (batch_size = 2, num_heads = 8,context_len = 3, head_dim = 121) which is not attention scores, but new context enriched vector
         context_vec = att_score @ v
 
         # now lets revert to
@@ -81,6 +85,9 @@ class MaskedMultiHeadAttention(nn.Module):
         # now lets concatenate all the head so we have like at the beggining
         # (batch_size = 2, context_len = 3, dim_out = 968)
         context_vec = context_vec.contiguous().view(batch_size, context_length, self.dim_out)
+
+        # mixing the attention info with the out projection, the size stays the same
+        # (batch_size = 2, context_len = 3, dim_out = 968)
         context_vec = self.out_projection(context_vec)
         return context_vec
 
