@@ -706,6 +706,11 @@ class GPT2Trainer:
         pass
 ```
 
+**Features:**
+- **Pre-training:** It is pre-training loop, no fine-tuning here
+- **AMP, scaling, checkpoints every x-steps/epochs, history, gradient accumulation and many more**
+- **Metrics**: Categorical cross-entropy, accuracy, perplexity
+
 ---
 
 ### 10. **Early Stopping** (`src/Utils/EarlyStopper.py`)
