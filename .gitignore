@@ -281,4 +281,5 @@ http-client.private.env.json
 # =-=-=-=-=-=-=-=-=-= Custom User Section =-=-=-=-=-=-=-=-=-=
 *.npy
 *.png
+.DS_Store
 # =-=-=-=-=-=-=-=-=-= END Custom User Section =-=-=-=-=-=-=-=-=-=
