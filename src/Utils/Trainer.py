@@ -28,7 +28,7 @@ class GPT2Trainer:
         else:
             self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=config.max_lr, fused=False)
 
-        self.scaler = torch.amp.GradScaler(device=config.device, enabled=(config.use_amp and "cuda" in config.device))
+        self.scaler = torch.cuda.amp.GradScaler(enabled=(config.use_amp and "cuda" in config.device))
 
         self.current_step = 0
         self.current_epoch = 0
